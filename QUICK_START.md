@@ -340,4 +340,4 @@ output/
 
 ## 📞 Need Help?
 
-See full documentation in `README.md` or contact your Sardine account representative.
+See full documentation in `README.md`.

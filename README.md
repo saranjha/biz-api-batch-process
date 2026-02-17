@@ -668,7 +668,3 @@ python main.py ../input/sample.csv
 ```
 
 Validate without API submission first, then add `--send-api` flag.
-
-## Support
-
-For issues or questions, contact your Sardine account representative.
