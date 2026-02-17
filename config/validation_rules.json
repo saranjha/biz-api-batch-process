@@ -1,0 +1,207 @@
+{
+  "business.trackingId": {
+    "required": false,
+    "type": "string",
+    "description": "Optional tracking ID for the business"
+  },
+  "business.name": {
+    "required": true,
+    "type": "string",
+    "maxLength": 128,
+    "description": "Business name (max 128 characters)"
+  },
+  "business.taxId": {
+    "required": false,
+    "type": "string",
+    "pattern": "^\\d{9}$",
+    "description": "9-digit EIN (e.g., 123456789)",
+    "conditionalRequired": {
+      "dependsOn": "config.kybLevel",
+      "whenNotIn": ["disable", ""],
+      "message": "Required when config.kybLevel is '{value}'"
+    }
+  },
+  "business.website": {
+    "required": false,
+    "type": "string",
+    "pattern": "^https?://",
+    "description": "Must include http:// or https://"
+  },
+  "business.address.street1": {
+    "required": false,
+    "type": "string",
+    "description": "Street address line 1"
+  },
+  "business.address.street2": {
+    "required": false,
+    "type": "string",
+    "description": "Street address line 2"
+  },
+  "business.address.city": {
+    "required": false,
+    "type": "string",
+    "description": "City name"
+  },
+  "business.address.regionCode": {
+    "required": false,
+    "type": "string",
+    "pattern": "^[A-Z]{2}$",
+    "description": "2-letter state/region code (ISO 3166-2, e.g., CA)"
+  },
+  "business.address.postalCode": {
+    "required": false,
+    "type": "string",
+    "description": "Postal/ZIP code"
+  },
+  "business.address.countryCode": {
+    "required": false,
+    "type": "string",
+    "pattern": "^[A-Z]{2}$",
+    "description": "2-letter country code (ISO 3166-1, e.g., US)",
+    "conditionalRequired": {
+      "dependsOn": [
+        "business.address.street1",
+        "business.address.street2",
+        "business.address.city",
+        "business.address.regionCode",
+        "business.address.postalCode"
+      ],
+      "whenAnyPresent": true,
+      "message": "Required when any address field is present"
+    }
+  },
+  "business.phone": {
+    "required": false,
+    "type": "array",
+    "itemPattern": "^\\+[1-9]\\d{1,14}$",
+    "description": "Phone numbers in E.164 format (e.g., +14151231234). Separate multiple with | or ,"
+  },
+  "business.emailAddress": {
+    "required": false,
+    "type": "string",
+    "pattern": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$",
+    "description": "Valid email address"
+  },
+  "business.incorporationDateMillis": {
+    "required": false,
+    "type": "integer",
+    "min": -5364662400,
+    "max": 4102444800000,
+    "description": "Unix timestamp in milliseconds"
+  },
+  "business.onboardingDate": {
+    "required": false,
+    "type": "integer",
+    "min": -5364662400,
+    "max": 4102444800000,
+    "description": "Unix timestamp in milliseconds"
+  },
+  "business.annualTurnOver": {
+    "required": false,
+    "type": "integer",
+    "min": 0,
+    "max": 1000000000000,
+    "description": "Annual turnover amount"
+  },
+  "business.annualTurnoverCurrency": {
+    "required": false,
+    "type": "string",
+    "minLength": 3,
+    "maxLength": 3,
+    "pattern": "^[A-Z]{3}$",
+    "description": "3-letter ISO 4217 currency code (e.g., USD)"
+  },
+  "business.categories": {
+    "required": false,
+    "type": "array",
+    "enumValues": ["eCommerce", "cryptoOnramp", "neoBank", "nftCustomer"],
+    "description": "Business categories. Separate multiple with | or ,"
+  },
+  "business.tags": {
+    "required": false,
+    "type": "array",
+    "enumValues": ["questionable KYC", "ekyc failed"],
+    "description": "Business tags. Separate multiple with | or ,"
+  },
+  "business.partnerId": {
+    "required": false,
+    "type": "string",
+    "maxLength": 100,
+    "description": "ID of the associated partner/business/merchant"
+  },
+  "business.primaryMccCode": {
+    "required": false,
+    "type": "string",
+    "minLength": 4,
+    "maxLength": 4,
+    "pattern": "^\\d{4}$",
+    "description": "4-digit Primary Merchant Category Code (MCC)"
+  },
+  "business.size": {
+    "required": false,
+    "type": "integer",
+    "min": 0,
+    "max": 41024448000000,
+    "description": "Number of employees"
+  },
+  "business.precomputedRiskLevel": {
+    "required": false,
+    "type": "enum",
+    "values": ["low", "medium", "high", "very_high", "unknown"],
+    "description": "Precomputed risk level for the business"
+  },
+  "business.legalStructure": {
+    "required": false,
+    "type": "enum",
+    "values": [
+      "sole_proprietorship",
+      "partnership",
+      "corporation",
+      "llc",
+      "non_profit",
+      "trust",
+      "cooperative",
+      "government_entity",
+      "other",
+      "unknown"
+    ],
+    "description": "Legal structure of the business"
+  },
+  "config.kybLevel": {
+    "required": true,
+    "type": "enum",
+    "values": ["international", "standard", "tin-only", "disable"],
+    "description": "Type of KYB screening (required)"
+  },
+  "config.workflowName": {
+    "required": false,
+    "type": "string",
+    "description": "Name of the workflow to execute"
+  },
+  "config.web360Enabled": {
+    "required": false,
+    "type": "boolean",
+    "description": "Enable Web360 enrichment (true/false)"
+  },
+  "config.experianCreditEnrichment.isEnabled": {
+    "required": false,
+    "type": "boolean",
+    "description": "Enable Experian credit report enrichment (true/false)"
+  },
+  "config.advancedAmlScreening.isEnabled": {
+    "required": false,
+    "type": "boolean",
+    "description": "Enable advanced AML screening (true/false)"
+  },
+  "config.advancedAmlScreening.mode": {
+    "required": false,
+    "type": "enum",
+    "values": ["screening_only", "monitoring_only", "screening_and_monitoring"],
+    "description": "AML screening mode"
+  },
+  "config.advancedAmlScreening.isSync": {
+    "required": false,
+    "type": "boolean",
+    "description": "Synchronous AML screening flag (true/false)"
+  }
+}
