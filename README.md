@@ -178,24 +178,16 @@ See `config/validation_rules.json` for complete field specifications.
 
 ## Performance
 
-### Speed Comparison
-
-| Configuration | Records/Min | Use Case |
-|--------------|-------------|----------|
-| Sequential (old) | ~120/hour | Testing, small batches |
-| **Parallel (4 workers)** | **~480/min** | Production batches |
-| Parallel (8 workers) | ~800/min | High-volume processing |
-
-### Tuning Performance
+### Tuning Requests Per Minute
 
 Edit `.env` to adjust:
 
 ```bash
 # Number of parallel workers (default: 4)
-NUM_PROCESSES=8
+NUM_PROCESSES=4
 
-# Delay between requests per worker (default: 0.5s)
-RATE_LIMIT_DELAY=0.3
+# Delay between requests per worker (default: 1.2s)
+RATE_LIMIT_DELAY=1.2
 ```
 
 **Recommendation:** Start with defaults, increase gradually if no rate limit errors occur.
