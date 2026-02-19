@@ -16,7 +16,7 @@ cat > .env << EOF
 SARDINE_CLIENT_ID=your-client-id
 SARDINE_CLIENT_SECRET=your-client-secret
 SARDINE_API_URL=https://api.sandbox.sardine.ai/v1/businesses
-RATE_LIMIT_DELAY=0.5
+RATE_LIMIT_DELAY=1.2
 NUM_PROCESSES=4
 EOF
 ```
@@ -72,7 +72,7 @@ business.trackingId,business.name,business.taxId,business.website,business.addre
 ```
 
 **Key Points:**
-- Use dot notation: `business.address.city` (not `city`)
+- Use dot notation for nested attributes: `business.address.city` 
 - Required: `business.name`, `config.kybLevel`
 - Phone format: `+14151234567` (E.164)
 - Multiple phones: `+1234|+5678` or `+1234,+5678`
