@@ -22,7 +22,7 @@ A robust Python tool for validating CSV batch files, converting them to JSON, an
 - **Test-first mode** - Tests first payload before batch processing
 - Basic authentication with Sardine API
 - Automatic UUID generation for request tracking (X-Request-Id header)
-- Rate limiting (configurable, default: 0.5s per request)
+- Rate limiting (configurable, default: 1.2s per request)
 - **Continue-on-error** - Processes all records, logs failures
 - **Intelligent retry** - Retry specific failed records by index
 
@@ -73,7 +73,7 @@ Edit `.env` with your Sardine credentials:
 SARDINE_CLIENT_ID=your-client-id-here
 SARDINE_CLIENT_SECRET=your-client-secret-here
 SARDINE_API_URL=https://api.sandbox.sardine.ai/v1/businesses
-RATE_LIMIT_DELAY=0.5
+RATE_LIMIT_DELAY=1.2
 NUM_PROCESSES=4
 ```
 
@@ -356,7 +356,7 @@ python main.py ../input/merchants.csv --send-api --retry-failed ../output/respon
 - Verify clientID and clientSecret are correct
 
 ### Rate Limiting / Timeouts
-- Adjust `RATE_LIMIT_DELAY` in `.env` (default: 0.5 seconds)
+- Adjust `RATE_LIMIT_DELAY` in `.env` (default: 1.2 seconds)
 - Reduce `NUM_PROCESSES` if hitting API rate limits
 - Check network connectivity to `api.sandbox.sardine.ai`
 
@@ -448,7 +448,7 @@ Edit `config/.env` with your Sardine credentials:
 SARDINE_CLIENT_ID=your-client-id-here
 SARDINE_CLIENT_SECRET=your-client-secret-here
 SARDINE_API_URL=https://api.sandbox.sardine.ai/v1/businesses
-RATE_LIMIT_DELAY=0.5
+RATE_LIMIT_DELAY=1.2
 ```
 
 ### 3. Prepare CSV File
@@ -624,8 +624,8 @@ python api_sender.py ../output/validated/merchants_20250216_143022.json
 - Verify clientID and clientSecret are correct
 
 ### Rate Limiting / Timeouts
-- Adjust `RATE_LIMIT_DELAY` in `.env` (default: 0.5 seconds)
-- Check network connectivity to `api.sandbox.sardine.ai`
+- Adjust `RATE_LIMIT_DELAY` in `.env` 
+- Check network connectivity to `api.sandbox.sardine.ai` or `api.sardine.ai`
 
 ## Development
 
