@@ -1,23 +1,23 @@
-# CSV to JSON Converter & Sardine API Integration
+# Business API CSV Batch Data Uploader
 
-A robust Python tool for validating CSV batch files, converting them to JSON, and submitting them to the Sardine API with parallel processing and intelligent retry mechanisms.
+Python tool for validating CSV batch files, converting them to JSON, and submitting them to the Sardine Business API.
 
 ## Features
 
-✅ **CSV Validation** - Comprehensive validation against API schema
+✅ **CSV Validation** - Validation against API schema
 - Required field checks
 - Data type validation (string, integer, boolean, enum, array)
 - Pattern matching (regex for emails, phones, URLs, etc.)
 - Conditional requirements (e.g., taxId required when kybLevel ≠ disable)
 - Length and range constraints
 
-✅ **JSON Conversion** - Smart flat-to-nested transformation
+✅ **JSON Conversion** - Flat-to-nested transformation
 - Dot notation to nested objects (`business.address.city` → `{"business": {"address": {"city": "..."}}}`)
 - Type conversion (strings → integers/booleans)
 - Array parsing (pipe or comma separated)
 - Empty field omission
 
-✅ **API Integration** - High-performance batch submission
+✅ **API Integration** - Batch submission
 - **Parallel processing** with configurable workers (default: 4)
 - **Test-first mode** - Tests first payload before batch processing
 - Basic authentication with Sardine API
@@ -29,7 +29,7 @@ A robust Python tool for validating CSV batch files, converting them to JSON, an
 ## Project Structure
 
 ```
-csv-to-json-validator/
+BusinessAPILoader/
 ├── .env                           # API credentials (create from template)
 ├── config/
 │   ├── .env.template              # Environment configuration template
