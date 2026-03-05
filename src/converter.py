@@ -52,12 +52,19 @@ class Converter:
         # Start with empty result
         result = {}
 
+        # Extract business tags first (special handling)
+        business_tags = self._extract_business_tags(row)
+
         # Process each field in the row
         for field_name, value in row.items():
             value = value.strip()
 
             # Skip empty values (omit from JSON)
             if not value:
+                continue
+
+            # Skip businessTags columns (already processed above)
+            if field_name.startswith('business.businessTags.'):
                 continue
 
             # Get the rule for this field to determine type
@@ -68,6 +75,12 @@ class Converter:
 
             # Build nested structure
             self._set_nested_value(result, field_name, converted_value)
+
+        # Add business tags if any exist
+        if business_tags:
+            if 'business' not in result:
+                result['business'] = {}
+            result['business']['businessTags'] = business_tags
 
         return result
 
@@ -116,6 +129,78 @@ class Converter:
             items = [value.strip()] if value.strip() else []
 
         return items
+
+    def _extract_business_tags(self, row: Dict[str, str]) -> List[Dict[str, Any]]:
+        """
+        Extract business tags from flattened columns and build array of tag objects.
+
+        Args:
+            row: Flat row dictionary with dot notation keys
+
+        Returns:
+            List of {name, value, type} objects
+        """
+        business_tags = {}
+
+        # Find all businessTags columns
+        for field_name, value in row.items():
+            if not field_name.startswith('business.businessTags.'):
+                continue
+
+            value = value.strip()
+            if not value:  # Skip empty values
+                continue
+
+            # Extract parts after 'business.businessTags.'
+            parts = field_name.split('.')
+            if len(parts) < 3:
+                continue
+
+            # Check if this is a .type column
+            if parts[-1] == 'type':
+                # This is a type column: business.businessTags.tagName.type
+                tag_name = '.'.join(parts[2:-1])  # Everything between businessTags and type
+                if tag_name not in business_tags:
+                    business_tags[tag_name] = {}
+                business_tags[tag_name]['type'] = value
+            else:
+                # This is a value column: business.businessTags.tagName
+                tag_name = '.'.join(parts[2:])  # Everything after businessTags
+                if tag_name not in business_tags:
+                    business_tags[tag_name] = {}
+                business_tags[tag_name]['value'] = value
+
+        # Build array of tag objects
+        result = []
+        for tag_name, tag_data in business_tags.items():
+            if 'value' not in tag_data:
+                continue  # Skip if no value provided
+
+            tag_type = tag_data.get('type', 'string')  # Default to 'string' if no type specified
+            tag_value = tag_data['value']
+
+            # Convert value based on type
+            if tag_type == 'int' or tag_type == 'score':
+                try:
+                    tag_value = int(tag_value)
+                except ValueError:
+                    # Keep as string if conversion fails
+                    pass
+            elif tag_type == 'float':
+                try:
+                    tag_value = float(tag_value)
+                except ValueError:
+                    # Keep as string if conversion fails
+                    pass
+            # For 'string' and 'level', keep as string (no conversion needed)
+
+            result.append({
+                'name': tag_name,
+                'value': tag_value,
+                'type': tag_type
+            })
+
+        return result
 
     def _set_nested_value(self, obj: Dict[str, Any], path: str, value: Any) -> None:
         """

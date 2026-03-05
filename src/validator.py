@@ -84,6 +84,76 @@ class Validator:
         with open(rules_path, 'r') as f:
             self.rules = json.load(f)
 
+    def _matches_pattern(self, field_name: str, pattern: str) -> bool:
+        """
+        Check if field_name matches a wildcard pattern.
+
+        Args:
+            field_name: Actual field name (e.g., 'business.businessTags.salesforceId')
+            pattern: Pattern with wildcard (e.g., 'business.businessTags.*')
+
+        Returns:
+            True if field matches pattern
+        """
+        if '*' not in pattern:
+            return field_name == pattern
+
+        # Convert pattern to regex
+        # Escape dots, replace * with one or more non-dot characters
+        regex_pattern = pattern.replace('.', '\\.').replace('*', '[^.]+')
+        regex_pattern = f'^{regex_pattern}$'
+
+        return bool(re.match(regex_pattern, field_name))
+
+    def _get_matching_rule(self, field_name: str) -> tuple:
+        """
+        Get validation rule for a field, including wildcard matches.
+
+        Args:
+            field_name: Field name to find rule for
+
+        Returns:
+            Tuple of (rule_key, rule_dict) or (None, None) if no match
+        """
+        # Try exact match first (faster)
+        if field_name in self.rules:
+            return field_name, self.rules[field_name]
+
+        # Try wildcard patterns
+        for rule_key, rule in self.rules.items():
+            if '*' in rule_key and self._matches_pattern(field_name, rule_key):
+                return rule_key, rule
+
+        return None, None
+
+    def _extract_tag_name(self, field_name: str, pattern: str) -> str | None:
+        """
+        Extract the wildcard part from a field name given a pattern.
+
+        Args:
+            field_name: e.g., 'business.businessTags.salesforceId'
+            pattern: e.g., 'business.businessTags.*'
+
+        Returns:
+            The part matching the wildcard, e.g., 'salesforceId'
+        """
+        if '*' not in pattern:
+            return None
+
+        # Split both by dots
+        pattern_parts = pattern.split('.')
+        field_parts = field_name.split('.')
+
+        # Find the index of the wildcard
+        try:
+            wildcard_index = pattern_parts.index('*')
+            if wildcard_index < len(field_parts):
+                return field_parts[wildcard_index]
+        except (ValueError, IndexError):
+            return None
+
+        return None
+
     def validate_headers(self, csv_headers: List[str]) -> List[str]:
         """
         Validate CSV headers against expected fields.
@@ -97,24 +167,46 @@ class Validator:
         header_errors = []
         csv_headers_set = set(csv_headers)
 
-        # Check for required fields
+        # Check for required fields (non-wildcard only)
         for field_name, rule in self.rules.items():
+            if '*' in field_name:  # Skip wildcard patterns
+                continue
             if rule.get('required', False):
                 if field_name not in csv_headers_set:
                     header_errors.append(f"Missing required header: '{field_name}'")
 
-        # Check for unknown headers (potential typos)
-        known_fields = set(self.rules.keys())
+        # Check for unknown headers and validate wildcard patterns
         for header in csv_headers:
-            if header and header not in known_fields:
-                # Try to find similar field names (simple suggestion)
-                suggestions = self._find_similar_fields(header, known_fields)
-                if suggestions:
-                    header_errors.append(
-                        f"Unknown header: '{header}' (did you mean '{suggestions[0]}'?)"
-                    )
-                else:
-                    header_errors.append(f"Unknown header: '{header}'")
+            if not header:  # Skip empty headers
+                continue
+
+            # Check if exact match exists
+            if header in self.rules:
+                continue
+
+            # Check if it matches a wildcard pattern
+            rule_key, rule = self._get_matching_rule(header)
+            if rule:
+                # Validate the tag name for businessTags fields
+                if 'business.businessTags.' in header:
+                    tag_name = self._extract_tag_name(header, rule_key)
+                    if tag_name:
+                        # Validate tag name is alphanumeric + underscores only
+                        if not re.match(r'^[a-zA-Z0-9_]+$', tag_name):
+                            header_errors.append(
+                                f"Invalid tag name in '{header}': '{tag_name}' - "
+                                "Tag names may only contain letters, numbers, and underscores"
+                            )
+                continue
+
+            # Unknown header - try to suggest similar
+            suggestions = self._find_similar_fields(header, set(self.rules.keys()))
+            if suggestions:
+                header_errors.append(
+                    f"Unknown header: '{header}' (did you mean '{suggestions[0]}'?)"
+                )
+            else:
+                header_errors.append(f"Unknown header: '{header}'")
 
         return header_errors
 
@@ -173,8 +265,16 @@ class Validator:
         errors = []
         warnings = []
 
+        # Track which fields we've already validated
+        validated_fields = set()
+
+        # First pass: Validate fields with exact rules (non-wildcard)
         for field_name, rule in self.rules.items():
+            if '*' in field_name:  # Skip wildcard patterns for now
+                continue
+
             value = row.get(field_name, "").strip()
+            validated_fields.add(field_name)
 
             # Check conditional requirements first
             if 'conditionalRequired' in rule:
@@ -204,6 +304,26 @@ class Validator:
                 continue
 
             # Validate type and format
+            field_errors = self._validate_field(row_num, field_name, value, rule)
+            errors.extend(field_errors)
+
+        # Second pass: Validate fields that match wildcard patterns
+        for field_name, value in row.items():
+            if field_name in validated_fields:  # Already validated
+                continue
+
+            # Try to find a matching wildcard rule
+            rule_key, rule = self._get_matching_rule(field_name)
+            if not rule:
+                continue
+
+            value = value.strip()
+
+            # Skip empty values for optional fields
+            if not value:
+                continue
+
+            # Validate the field
             field_errors = self._validate_field(row_num, field_name, value, rule)
             errors.extend(field_errors)
 
