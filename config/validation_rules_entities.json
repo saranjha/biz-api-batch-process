@@ -1,0 +1,104 @@
+{
+  "businessId": {
+    "required": true,
+    "type": "string",
+    "description": "ID of the main business (from business creation response)"
+  },
+  "entities.businessEntityType": {
+    "required": true,
+    "type": "enum",
+    "values": ["individual", "business"],
+    "description": "Type of entity"
+  },
+  "entities.name": {
+    "required": true,
+    "type": "string",
+    "description": "Full name of the individual or business entity"
+  },
+  "entities.businessEntityId": {
+    "required": false,
+    "type": "string",
+    "description": "Optional unique ID for this specific entity entry"
+  },
+  "entities.role": {
+    "required": false,
+    "type": "string",
+    "description": "Role of the individual (e.g., CEO, CFO)"
+  },
+  "entities.ownershipPercent": {
+    "required": false,
+    "type": "integer",
+    "min": 0,
+    "max": 10000,
+    "description": "Ownership percentage in basis points (e.g., 2500 = 25%)"
+  },
+  "entities.dateOfBirth": {
+    "required": false,
+    "type": "string",
+    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+    "description": "Date of birth in YYYY-MM-DD format"
+  },
+  "entities.taxId": {
+    "required": false,
+    "type": "string",
+    "pattern": "^\\d{9}$",
+    "description": "9-digit tax ID/SSN"
+  },
+  "entities.emailAddress": {
+    "required": false,
+    "type": "string",
+    "pattern": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$",
+    "description": "Valid email address"
+  },
+  "entities.phone": {
+    "required": false,
+    "type": "string",
+    "pattern": "^\\+[1-9]\\d{1,14}$",
+    "description": "Phone in E.164 format (e.g., +14151234567)"
+  },
+  "entities.nationality": {
+    "required": false,
+    "type": "string",
+    "minLength": 2,
+    "maxLength": 2,
+    "pattern": "^[A-Z]{2}$",
+    "description": "2-letter country code (ISO 3166-1)"
+  },
+  "entities.customerId": {
+    "required": false,
+    "type": "string",
+    "description": "Your own customer ID for this entity"
+  },
+  "entities.address.street1": {
+    "required": false,
+    "type": "string",
+    "description": "Street address line 1"
+  },
+  "entities.address.street2": {
+    "required": false,
+    "type": "string",
+    "description": "Street address line 2"
+  },
+  "entities.address.city": {
+    "required": false,
+    "type": "string",
+    "description": "City"
+  },
+  "entities.address.regionCode": {
+    "required": false,
+    "type": "string",
+    "pattern": "^[A-Z]{2}$",
+    "description": "2-letter state/region code (ISO 3166-2, e.g., CA)"
+  },
+  "entities.address.postalCode": {
+    "required": false,
+    "type": "string",
+    "description": "Postal/ZIP code"
+  },
+  "entities.address.countryCode": {
+    "required": false,
+    "type": "string",
+    "pattern": "^[A-Z]{2}$",
+    "description": "2-letter country code (ISO 3166-1, e.g., US)"
+  }
+}
