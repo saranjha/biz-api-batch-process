@@ -147,7 +147,7 @@ Examples:
     parser.add_argument('--retry-failed', type=str,
                         help='Path to failed_*.json file to retry all failed records')
     parser.add_argument('--endpoint',
-                        choices=['business', 'entities'],
+                        choices=['business', 'entities', 'locations'],
                         default='business',
                         help='API endpoint to use (default: business)')
 
@@ -175,6 +175,9 @@ def main():
     elif endpoint == 'entities':
         rules_file_path = args.rules if args.rules else '../config/validation_rules_entities.json'
         api_url_env_var = 'SARDINE_ENTITIES_API_URL'
+    elif endpoint == 'locations':
+        rules_file_path = args.rules if args.rules else '../config/validation_rules_locations.json'
+        api_url_env_var = 'SARDINE_LOCATIONS_API_URL'
     else:
         print(f"❌ Error: Unknown endpoint '{endpoint}'")
         sys.exit(1)
@@ -237,9 +240,11 @@ def main():
 
         # Convert rows to JSON (different logic based on endpoint)
         if endpoint == 'entities':
-            # For entities: group multiple rows by businessId
             json_data = converter.csv_to_json_grouped(rows, 'businessId')
             print(f"   ✓ Converted {len(rows)} entity rows into {len(json_data)} grouped records\n")
+        elif endpoint == 'locations':
+            json_data = converter.csv_to_json_grouped(rows, 'businessId')
+            print(f"   ✓ Converted {len(rows)} location rows into {len(json_data)} grouped records\n")
         else:
             # For business endpoint: one row = one JSON object
             json_data = converter.csv_to_json(rows)

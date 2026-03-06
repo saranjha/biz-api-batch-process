@@ -188,10 +188,9 @@ class Validator:
             rule_key, rule = self._get_matching_rule(header)
             if rule:
                 # Validate the tag name for businessTags fields
-                if 'business.businessTags.' in header:
+                if 'business.businessTags.' in header or 'location.locationTags.' in header:
                     tag_name = self._extract_tag_name(header, rule_key)
                     if tag_name:
-                        # Validate tag name is alphanumeric + underscores only
                         if not re.match(r'^[a-zA-Z0-9_]+$', tag_name):
                             header_errors.append(
                                 f"Invalid tag name in '{header}': '{tag_name}' - "

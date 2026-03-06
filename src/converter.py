@@ -62,82 +62,163 @@ class Converter:
             if not group_key:
                 continue  # Skip rows without a group key
             grouped_rows[group_key].append(row)
+            # Detect child prefix (entities. or location.)
+            child_prefix = self._detect_child_prefix(rows)
 
-        # Convert each group to a JSON object
-        json_objects = []
-        for group_key, group_rows in grouped_rows.items():
-            # Start with the base object
-            json_obj = {}
+            # Convert each group to a JSON object
+            json_objects = []
+            for group_key, group_rows in grouped_rows.items():
+                json_obj = {}
+                json_obj[group_by_field] = group_key
 
-            # First, add the group key field (e.g., businessId)
-            json_obj[group_by_field] = group_key
-
-            # Extract any non-entity fields from the first row
-            first_row = group_rows[0]
-            for field_name, value in first_row.items():
-                value = value.strip()
-
-                # Skip empty values
-                if not value:
-                    continue
-
-                # Skip the group key (already added)
-                if field_name == group_by_field:
-                    continue
-
-                # Skip entity fields (will be processed separately)
-                if field_name.startswith('entities.'):
-                    continue
-
-                # Process other fields normally
-                rule = self.rules.get(field_name, {})
-                converted_value = self._convert_value(value, rule)
-                self._set_nested_value(json_obj, field_name, converted_value)
-
-            # Build entities array from all rows in this group
-            entities = []
-            for row in group_rows:
-                entity = {}
-                for field_name, value in row.items():
+                # Extract any non-child fields from the first row
+                first_row = group_rows[0]
+                for field_name, value in first_row.items():
                     value = value.strip()
-
-                    # Only process entity fields
-                    if not field_name.startswith('entities.'):
-                        continue
-
-                    # Skip empty values
                     if not value:
                         continue
-
-                    # Remove 'entities.' prefix to get the field path
-                    entity_field = field_name.replace('entities.', '', 1)
-
-                    # Get rule for type conversion
-                    # Try exact match first, then wildcard pattern
+                    if field_name == group_by_field:
+                        continue
+                    if child_prefix and field_name.startswith(child_prefix):
+                        continue
                     rule = self.rules.get(field_name, {})
-                    if not rule:
-                        # Try wildcard pattern for backwards compatibility
-                        rule_pattern = f"entities.*.{entity_field}"
-                        rule = self.rules.get(rule_pattern, {})
-
-                    # Convert value based on type
                     converted_value = self._convert_value(value, rule)
+                    self._set_nested_value(json_obj, field_name, converted_value)
 
-                    # Build nested structure for this entity field
-                    self._set_nested_value(entity, entity_field, converted_value)
+                # Build child array from all rows in this group
+                children = []
+                for row in group_rows:
+                    child = self._convert_child_row(row, child_prefix)
+                    if child:
+                        children.append(child)
 
-                # Only add non-empty entities
-                if entity:
-                    entities.append(entity)
+                if children:
+                    array_key = self._child_array_key(child_prefix)
+                    json_obj[array_key] = children
 
-            # Add entities array to the JSON object
-            if entities:
-                json_obj['entities'] = entities
+                json_objects.append(json_obj)
 
-            json_objects.append(json_obj)
+            return json_objects
 
-        return json_objects
 
+    def _detect_child_prefix(self, rows: List[Dict[str, str]]) -> str | None:
+        if not rows:
+            return None
+        for field_name in rows[0].keys():
+            if field_name.startswith('entities.'):
+                return 'entities.'
+            if field_name.startswith('location.'):
+                return 'location.'
+        return None
+
+    def _child_array_key(self, child_prefix: str | None) -> str:
+        if child_prefix == 'entities.':
+            return 'entities'
+        if child_prefix == 'location.':
+            return 'locations'
+        return 'items'
+
+    def _convert_child_row(self, row: Dict[str, str], child_prefix: str | None) -> Dict[str, Any]:
+        if child_prefix == 'location.':
+            return self._convert_location_row(row)
+        else:
+            return self._convert_entity_row(row, child_prefix)
+
+    def _convert_entity_row(self, row: Dict[str, str], child_prefix: str | None) -> Dict[str, Any]:
+        entity = {}
+        for field_name, value in row.items():
+            value = value.strip()
+            if not field_name.startswith(child_prefix or 'entities.'):
+                continue
+            if not value:
+                continue
+
+            entity_field = field_name.replace(child_prefix or 'entities.', '', 1)
+            rule = self.rules.get(field_name, {})
+            if not rule:
+                rule_pattern = f"entities.*.{entity_field}"
+                rule = self.rules.get(rule_pattern, {})
+
+            converted_value = self._convert_value(value, rule)
+            self._set_nested_value(entity, entity_field, converted_value)
+
+        return entity
+
+    def _convert_location_row(self, row: Dict[str, str]) -> Dict[str, Any]:
+        location = {}
+        location_tags = self._extract_location_tags(row)
+
+        for field_name, value in row.items():
+            value = value.strip()
+            if not field_name.startswith('location.'):
+                continue
+            if not value:
+                continue
+            if field_name.startswith('location.locationTags.'):
+                continue
+
+            location_field = field_name.replace('location.', '', 1)
+            rule = self.rules.get(field_name, {})
+            converted_value = self._convert_value(value, rule)
+            self._set_nested_value(location, location_field, converted_value)
+
+        if location_tags:
+            location['locationTags'] = location_tags
+
+        return location
+
+    def _extract_location_tags(self, row: Dict[str, str]) -> List[Dict[str, Any]]:
+        location_tags = {}
+
+        for field_name, value in row.items():
+            if not field_name.startswith('location.locationTags.'):
+                continue
+            value = value.strip()
+            if not value:
+                continue
+
+            parts = field_name.split('.')
+            if len(parts) < 3:
+                continue
+
+            if parts[-1] == 'type':
+                tag_name = '.'.join(parts[2:-1])
+                if tag_name not in location_tags:
+                    location_tags[tag_name] = {}
+                location_tags[tag_name]['type'] = value
+            else:
+                tag_name = '.'.join(parts[2:])
+                if tag_name not in location_tags:
+                    location_tags[tag_name] = {}
+                location_tags[tag_name]['value'] = value
+
+        result = []
+        for tag_name, tag_data in location_tags.items():
+            if 'value' not in tag_data:
+                continue
+
+            tag_type = tag_data.get('type', 'string')
+            tag_value = tag_data['value']
+
+            if tag_type == 'int':
+                try:
+                    tag_value = int(tag_value)
+                except ValueError:
+                    pass
+            elif tag_type == 'float':
+                try:
+                    tag_value = float(tag_value)
+                except ValueError:
+                    pass
+
+            result.append({
+                'name': tag_name,
+                'value': tag_value,
+                'type': tag_type
+            })
+
+        return result
+    
     def _convert_row(self, row: Dict[str, str]) -> Dict[str, Any]:
         """
         Convert a single CSV row to nested JSON object.
