@@ -39,6 +39,105 @@ class Converter:
 
         return json_objects
 
+    def csv_to_json_grouped(self, rows: List[Dict[str, str]], group_by_field: str) -> List[Dict[str, Any]]:
+        """
+        Convert CSV rows to JSON, grouping by a specific field.
+
+        Used for entities endpoint where multiple CSV rows (entities) are grouped
+        by businessId into a single JSON object with an entities array.
+
+        Args:
+            rows: List of CSV rows
+            group_by_field: Field to group by (e.g., 'businessId')
+
+        Returns:
+            List of JSON objects (one per unique group value)
+        """
+        from collections import defaultdict
+
+        # Group rows by the specified field
+        grouped_rows = defaultdict(list)
+        for row in rows:
+            group_key = row.get(group_by_field, '').strip()
+            if not group_key:
+                continue  # Skip rows without a group key
+            grouped_rows[group_key].append(row)
+
+        # Convert each group to a JSON object
+        json_objects = []
+        for group_key, group_rows in grouped_rows.items():
+            # Start with the base object
+            json_obj = {}
+
+            # First, add the group key field (e.g., businessId)
+            json_obj[group_by_field] = group_key
+
+            # Extract any non-entity fields from the first row
+            first_row = group_rows[0]
+            for field_name, value in first_row.items():
+                value = value.strip()
+
+                # Skip empty values
+                if not value:
+                    continue
+
+                # Skip the group key (already added)
+                if field_name == group_by_field:
+                    continue
+
+                # Skip entity fields (will be processed separately)
+                if field_name.startswith('entities.'):
+                    continue
+
+                # Process other fields normally
+                rule = self.rules.get(field_name, {})
+                converted_value = self._convert_value(value, rule)
+                self._set_nested_value(json_obj, field_name, converted_value)
+
+            # Build entities array from all rows in this group
+            entities = []
+            for row in group_rows:
+                entity = {}
+                for field_name, value in row.items():
+                    value = value.strip()
+
+                    # Only process entity fields
+                    if not field_name.startswith('entities.'):
+                        continue
+
+                    # Skip empty values
+                    if not value:
+                        continue
+
+                    # Remove 'entities.' prefix to get the field path
+                    entity_field = field_name.replace('entities.', '', 1)
+
+                    # Get rule for type conversion
+                    # Try exact match first, then wildcard pattern
+                    rule = self.rules.get(field_name, {})
+                    if not rule:
+                        # Try wildcard pattern for backwards compatibility
+                        rule_pattern = f"entities.*.{entity_field}"
+                        rule = self.rules.get(rule_pattern, {})
+
+                    # Convert value based on type
+                    converted_value = self._convert_value(value, rule)
+
+                    # Build nested structure for this entity field
+                    self._set_nested_value(entity, entity_field, converted_value)
+
+                # Only add non-empty entities
+                if entity:
+                    entities.append(entity)
+
+            # Add entities array to the JSON object
+            if entities:
+                json_obj['entities'] = entities
+
+            json_objects.append(json_obj)
+
+        return json_objects
+
     def _convert_row(self, row: Dict[str, str]) -> Dict[str, Any]:
         """
         Convert a single CSV row to nested JSON object.
@@ -201,6 +300,7 @@ class Converter:
             })
 
         return result
+
 
     def _set_nested_value(self, obj: Dict[str, Any], path: str, value: Any) -> None:
         """

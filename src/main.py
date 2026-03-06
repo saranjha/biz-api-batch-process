@@ -134,7 +134,7 @@ Examples:
     )
 
     parser.add_argument('csv_file', help='Path to input CSV file')
-    parser.add_argument('--rules', default='../config/validation_rules.json',
+    parser.add_argument('--rules', default=None,
                         help='Path to validation rules file (default: ../config/validation_rules.json)')
     parser.add_argument('--output', default='../output/validated',
                         help='Output directory for JSON files (default: ../output/validated)')
@@ -146,6 +146,10 @@ Examples:
                         help='Retry specific record indexes (e.g., --retry-indexes 5 12 47)')
     parser.add_argument('--retry-failed', type=str,
                         help='Path to failed_*.json file to retry all failed records')
+    parser.add_argument('--endpoint',
+                        choices=['business', 'entities'],
+                        default='business',
+                        help='API endpoint to use (default: business)')
 
     return parser.parse_args()
 
@@ -159,10 +163,24 @@ def main():
     args = parse_arguments()
 
     csv_file_path = args.csv_file
-    rules_file_path = args.rules
     output_dir = args.output
     send_to_api = args.send_api
     env_file_path = args.env_file
+    endpoint = args.endpoint
+
+    # Determine rules file and API URL based on endpoint
+    if endpoint == 'business':
+        rules_file_path = args.rules if args.rules else '../config/validation_rules_business.json'
+        api_url_env_var = 'SARDINE_BUSINESS_API_URL'
+    elif endpoint == 'entities':
+        rules_file_path = args.rules if args.rules else '../config/validation_rules_entities.json'
+        api_url_env_var = 'SARDINE_ENTITIES_API_URL'
+    else:
+        print(f"❌ Error: Unknown endpoint '{endpoint}'")
+        sys.exit(1)
+
+    print(f"ℹ️  Endpoint: {endpoint}")
+    print(f"ℹ️  Rules file: {rules_file_path}\n")
 
     # Validate file paths
     if not os.path.exists(csv_file_path):
@@ -217,9 +235,15 @@ def main():
         # Initialize converter
         converter = Converter(rules_file_path)
 
-        # Convert rows to JSON
-        json_data = converter.csv_to_json(rows)
-        print(f"   ✓ Converted {len(json_data)} records to JSON\n")
+        # Convert rows to JSON (different logic based on endpoint)
+        if endpoint == 'entities':
+            # For entities: group multiple rows by businessId
+            json_data = converter.csv_to_json_grouped(rows, 'businessId')
+            print(f"   ✓ Converted {len(rows)} entity rows into {len(json_data)} grouped records\n")
+        else:
+            # For business endpoint: one row = one JSON object
+            json_data = converter.csv_to_json(rows)
+            print(f"   ✓ Converted {len(json_data)} records to JSON\n")
 
         # Generate output filename
         output_filename = generate_output_filename(csv_file_path)
@@ -256,7 +280,18 @@ def main():
                 # Load API configuration
                 print("Loading API configuration from .env file...")
                 api_config = APIConfig(env_file_path)
-                print("✓ API configuration loaded\n")
+
+                # Override API URL based on endpoint selection
+                endpoint_url = os.getenv(api_url_env_var)
+                if not endpoint_url:
+                    print(f"❌ Error: {api_url_env_var} not found in .env file")
+                    print(
+                        f"Please add: {api_url_env_var}=https://api.sandbox.sardine.ai/v1/businesses{'/' + endpoint if endpoint != 'business' else ''}")
+                    sys.exit(1)
+
+                api_config.api_url = endpoint_url
+                print(f"✓ API configuration loaded")
+                print(f"   Using endpoint: {endpoint_url}\n")
 
                 # Initialize API sender
                 api_sender = APISender(api_config)
