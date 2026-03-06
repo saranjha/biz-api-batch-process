@@ -243,8 +243,8 @@ def main():
             json_data = converter.csv_to_json_grouped(rows, 'businessId')
             print(f"   ✓ Converted {len(rows)} entity rows into {len(json_data)} grouped records\n")
         elif endpoint == 'locations':
-            json_data = converter.csv_to_json_grouped(rows, 'businessId')
-            print(f"   ✓ Converted {len(rows)} location rows into {len(json_data)} grouped records\n")
+            json_data = converter.csv_to_json_locations(rows)
+            print(f"   ✓ Converted {len(rows)} location records into JSON\n")
         else:
             # For business endpoint: one row = one JSON object
             json_data = converter.csv_to_json(rows)

@@ -62,44 +62,120 @@ class Converter:
             if not group_key:
                 continue  # Skip rows without a group key
             grouped_rows[group_key].append(row)
-            # Detect child prefix (entities. or location.)
-            child_prefix = self._detect_child_prefix(rows)
+        child_prefix = self._detect_child_prefix(rows)
 
-            # Convert each group to a JSON object
-            json_objects = []
-            for group_key, group_rows in grouped_rows.items():
-                json_obj = {}
-                json_obj[group_by_field] = group_key
+        # Convert each group to a JSON object
+        json_objects = []
+        for group_key, group_rows in grouped_rows.items():
+            json_obj = {}
+            json_obj[group_by_field] = group_key
 
-                # Extract any non-child fields from the first row
-                first_row = group_rows[0]
-                for field_name, value in first_row.items():
-                    value = value.strip()
-                    if not value:
-                        continue
-                    if field_name == group_by_field:
-                        continue
-                    if child_prefix and field_name.startswith(child_prefix):
-                        continue
-                    rule = self.rules.get(field_name, {})
-                    converted_value = self._convert_value(value, rule)
-                    self._set_nested_value(json_obj, field_name, converted_value)
+            # Extract any non-child fields from the first row
+            first_row = group_rows[0]
+            for field_name, value in first_row.items():
+                value = value.strip()
+                if not value:
+                    continue
+                if field_name == group_by_field:
+                    continue
+                if child_prefix and field_name.startswith(child_prefix):
+                    continue
+                rule = self.rules.get(field_name, {})
+                converted_value = self._convert_value(value, rule)
+                self._set_nested_value(json_obj, field_name, converted_value)
 
-                # Build child array from all rows in this group
-                children = []
-                for row in group_rows:
-                    child = self._convert_child_row(row, child_prefix)
-                    if child:
-                        children.append(child)
+            # Build child array from all rows in this group
+            children = []
+            for row in group_rows:
+                child = self._convert_child_row(row, child_prefix)
+                if child:
+                    children.append(child)
 
-                if children:
-                    array_key = self._child_array_key(child_prefix)
-                    json_obj[array_key] = children
+            if children:
+                array_key = self._child_array_key(child_prefix)
+                json_obj[array_key] = children
 
-                json_objects.append(json_obj)
+            json_objects.append(json_obj)
 
-            return json_objects
+        return json_objects
 
+    def csv_to_json_locations(self, rows: List[Dict[str, str]]) -> List[Dict[str, Any]]:
+        json_objects = []
+        for row in rows:
+            json_obj = self._convert_location_row_flat(row)
+            json_objects.append(json_obj)
+        return json_objects
+
+    def _convert_location_row_flat(self, row: Dict[str, str]) -> Dict[str, Any]:
+        result = {}
+        location_tags = self._extract_location_tags_flat(row)
+
+        for field_name, value in row.items():
+            value = value.strip()
+            if not value:
+                continue
+            if field_name.startswith('locationTags.'):
+                continue
+            rule = self.rules.get(field_name, {})
+            converted_value = self._convert_value(value, rule)
+            self._set_nested_value(result, field_name, converted_value)
+
+        if location_tags:
+            result['locationTags'] = location_tags
+
+        return result
+
+    def _extract_location_tags_flat(self, row: Dict[str, str]) -> List[Dict[str, Any]]:
+        location_tags = {}
+
+        for field_name, value in row.items():
+            if not field_name.startswith('locationTags.'):
+                continue
+            value = value.strip()
+            if not value:
+                continue
+
+            parts = field_name.split('.')
+            if len(parts) < 2:
+                continue
+
+            if parts[-1] == 'type':
+                tag_name = '.'.join(parts[1:-1])
+                if tag_name not in location_tags:
+                    location_tags[tag_name] = {}
+                location_tags[tag_name]['type'] = value
+            else:
+                tag_name = '.'.join(parts[1:])
+                if tag_name not in location_tags:
+                    location_tags[tag_name] = {}
+                location_tags[tag_name]['value'] = value
+
+        result = []
+        for tag_name, tag_data in location_tags.items():
+            if 'value' not in tag_data:
+                continue
+
+            tag_type = tag_data.get('type', 'string')
+            tag_value = tag_data['value']
+
+            if tag_type == 'int':
+                try:
+                    tag_value = int(tag_value)
+                except ValueError:
+                    pass
+            elif tag_type == 'float':
+                try:
+                    tag_value = float(tag_value)
+                except ValueError:
+                    pass
+
+            result.append({
+                'name': tag_name,
+                'value': tag_value,
+                'type': tag_type
+            })
+
+        return result
 
     def _detect_child_prefix(self, rows: List[Dict[str, str]]) -> str | None:
         if not rows:
