@@ -123,6 +123,17 @@
     "enumValues": ["questionable KYC", "ekyc failed"],
     "description": "Business tags. Separate multiple with | or ,"
   },
+  "business.businessTags.*": {
+    "required": false,
+    "type": "string",
+    "description": "Business tag value. Tag name (extracted from column header) may contain alphanumeric characters and underscores only"
+  },
+  "business.businessTags.*.type": {
+    "required": false,
+    "type": "enum",
+    "values": ["string", "level", "score", "int", "float"],
+    "description": "Tag value type (defaults to 'string' if omitted)"
+  },
   "business.partnerId": {
     "required": false,
     "type": "string",

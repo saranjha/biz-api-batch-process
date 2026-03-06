@@ -1,0 +1,84 @@
+{
+  "businessId": {
+    "required": true,
+    "type": "string",
+    "description": "ID of the main business (from business creation response)"
+  },
+  "locationId": {
+    "required": false,
+    "type": "string",
+    "description": "External location ID (e.g., loc-ext-srd-123)"
+  },
+  "name": {
+    "required": false,
+    "type": "string",
+    "description": "Name of the location (e.g., SardineAI HQ)"
+  },
+  "address.street1": {
+    "required": false,
+    "type": "string",
+    "description": "Street address line 1"
+  },
+  "address.street2": {
+    "required": false,
+    "type": "string",
+    "description": "Street address line 2"
+  },
+  "address.city": {
+    "required": false,
+    "type": "string",
+    "description": "City"
+  },
+  "address.regionCode": {
+    "required": false,
+    "type": "string",
+    "pattern": "^[A-Z]{2}$",
+    "description": "2-letter state/region code (ISO 3166-2, e.g., CA)"
+  },
+  "address.postalCode": {
+    "required": false,
+    "type": "string",
+    "description": "Postal/ZIP code"
+  },
+  "address.countryCode": {
+    "required": false,
+    "type": "string",
+    "pattern": "^[A-Z]{2}$",
+    "description": "2-letter country code (ISO 3166-1, e.g., US)",
+    "conditionalRequired": {
+      "dependsOn": [
+        "address.street1",
+        "address.street2",
+        "address.city",
+        "address.regionCode",
+        "address.postalCode"
+      ],
+      "whenAnyPresent": true,
+      "message": "Required when any address field is present"
+    }
+  },
+  "active": {
+    "required": false,
+    "type": "boolean",
+    "description": "Whether the location is active (true/false)"
+  },
+  "mccOverride": {
+    "required": false,
+    "type": "string",
+    "minLength": 4,
+    "maxLength": 4,
+    "pattern": "^\\d{4}$",
+    "description": "4-digit MCC override for this location (e.g., 5732)"
+  },
+  "locationTags.*": {
+    "required": false,
+    "type": "string",
+    "description": "Location tag value. Tag names may only contain letters, numbers, and underscores."
+  },
+  "locationTags.*.type": {
+    "required": false,
+    "type": "enum",
+    "values": ["string", "int", "float"],
+    "description": "Tag value type (defaults to 'string' if omitted)"
+  }
+}
