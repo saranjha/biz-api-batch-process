@@ -74,5 +74,11 @@
     "required": false,
     "type": "string",
     "description": "Location tag value. Tag names may only contain letters, numbers, and underscores."
+  },
+  "location.locationTags.*.type": {
+    "required": false,
+    "type": "enum",
+    "values": ["string", "int", "float"],
+    "description": "Tag value type (defaults to 'string' if omitted)"
   }
 }
