@@ -148,6 +148,33 @@
     "pattern": "^\\d{4}$",
     "description": "4-digit Primary Merchant Category Code (MCC)"
   },
+  "business.names": {
+    "required": false,
+    "type": "array",
+    "description": "Other names used for this business. Separate multiple with | or ,"
+  },
+  "business.customerIds": {
+    "required": false,
+    "type": "array",
+    "description": "List of IDs for the business representatives. Separate multiple with | or ,"
+  },
+  "business.legalEntityIds": {
+    "required": false,
+    "type": "array",
+    "description": "List of legal entity identifiers associated with this business. Separate multiple with | or ,"
+  },
+  "config.kybMonitoring": {
+    "required": false,
+    "type": "array",
+    "enumValues": ["bankruptcy", "watchlist_result", "registration", "tin", "lien"],
+    "description": "Event types for active KYB monitoring. Separate multiple with | or ,"
+  },
+  "config.checkpoints": {
+    "required": false,
+    "type": "array",
+    "enumValues": ["business", "business_score"],
+    "description": "Checkpoints to invoke. Separate multiple with | or ,"
+  },
   "business.size": {
     "required": false,
     "type": "integer",
