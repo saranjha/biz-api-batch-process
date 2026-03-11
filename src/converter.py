@@ -16,7 +16,7 @@ class Converter:
         Initialize converter with validation rules for type information.
 
         Args:
-            rules_path: Path to validation_rules.json file
+            rules_path: Path to validation_rules_business.json file
         """
         with open(rules_path, 'r') as f:
             self.rules = json.load(f)

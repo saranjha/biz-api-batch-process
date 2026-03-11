@@ -79,7 +79,7 @@ class Validator:
         Initialize validator with validation rules.
 
         Args:
-            rules_path: Path to validation_rules.json file
+            rules_path: Path to validation_rules_business.json file
         """
         with open(rules_path, 'r') as f:
             self.rules = json.load(f)
@@ -382,6 +382,48 @@ class Validator:
                     ))
 
         return errors, warnings
+
+    def _check_enrichment_warnings(self, row_num: int, row: Dict[str, str]) -> List[ValidationWarning]:
+        warnings = []
+
+        kyb_level = row.get('config.kybLevel', '').strip()
+        aml_enabled = row.get('config.advancedAmlScreening.isEnabled', '').strip().lower()
+        web360_enabled = row.get('config.web360Enabled', '').strip().lower()
+        experian_enabled = row.get('config.experianCreditEnrichment.isEnabled', '').strip().lower()
+
+        if kyb_level and kyb_level != 'disable':
+            warnings.append(ValidationWarning(
+                row_number=row_num,
+                field='config.kybLevel',
+                warning_type=WarningType.FORMAT_SUGGESTION,
+                message=f"config.kybLevel: KYB screening is enabled ('{kyb_level}') - this will trigger a paid KYB check"
+            ))
+
+        if aml_enabled and aml_enabled != 'false':
+            warnings.append(ValidationWarning(
+                row_number=row_num,
+                field='config.advancedAmlScreening.isEnabled',
+                warning_type=WarningType.FORMAT_SUGGESTION,
+                message="config.advancedAmlScreening.isEnabled: Advanced AML screening is enabled - this will trigger a paid AML check"
+            ))
+
+        if web360_enabled and web360_enabled != 'false':
+            warnings.append(ValidationWarning(
+                row_number=row_num,
+                field='config.web360Enabled',
+                warning_type=WarningType.FORMAT_SUGGESTION,
+                message="config.web360Enabled: Web360 enrichment is enabled - this will trigger a paid enrichment"
+            ))
+
+        if experian_enabled and experian_enabled != 'false':
+            warnings.append(ValidationWarning(
+                row_number=row_num,
+                field='config.experianCreditEnrichment.isEnabled',
+                warning_type=WarningType.FORMAT_SUGGESTION,
+                message="config.experianCreditEnrichment.isEnabled: Experian credit enrichment is enabled - this will trigger a paid enrichment"
+            ))
+
+        return warnings
 
     def _validate_field(self, row_num: int, field_name: str, value: str, rule: Dict[str, Any]) -> List[ValidationError]:
         """

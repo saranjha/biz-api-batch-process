@@ -135,7 +135,7 @@ Examples:
 
     parser.add_argument('csv_file', help='Path to input CSV file')
     parser.add_argument('--rules', default=None,
-                        help='Path to validation rules file (default: ../config/validation_rules.json)')
+                        help='Path to validation rules file (default: ../config/validation_rules_business.json)')
     parser.add_argument('--output', default='../output/validated',
                         help='Output directory for JSON files (default: ../output/validated)')
     parser.add_argument('--send-api', action='store_true',
@@ -232,7 +232,27 @@ def main():
         if not result.is_valid or header_errors:
             sys.exit(1)
 
-        # Step 7: Convert to JSON
+        # Step 7: Warn user about paid enrichment services
+        if result.warnings:
+            enrichment_warnings = [
+                w for w in result.warnings
+                if w.field in [
+                    'config.kybLevel',
+                    'config.advancedAmlScreening.isEnabled',
+                    'config.web360Enabled',
+                    'config.experianCreditEnrichment.isEnabled'
+                ]
+            ]
+            if enrichment_warnings:
+                print("⚠️  WARNING: Some records have paid enrichment services enabled.")
+                print("   Please review the warnings above before proceeding.\n")
+                user_input = input("Type 'yes' to continue with conversion: ").strip().lower()
+                if user_input != 'yes':
+                    print("\n❌ Conversion cancelled by user.")
+                    sys.exit(0)
+                print()
+
+        # Step 8: Convert to JSON
         print("🔄 Converting to JSON...\n")
 
         # Initialize converter
@@ -275,7 +295,7 @@ def main():
             print(converter.json_to_string([json_data[0]], indent=2))
             print("-" * 80 + "\n")
 
-        # Step 8: Send to API if requested
+        # Step 9: Send to API if requested
         if send_to_api:
             print("=" * 80)
             print("🚀 SENDING TO API")
